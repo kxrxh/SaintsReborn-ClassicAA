@@ -1,0 +1,7 @@
+# Third-party notices
+
+- [SMAA](https://github.com/iryoku/smaa/tree/71c806a838bdd7d517df19192a20f0c61b3ca29d), pinned to `71c806a838bdd7d517df19192a20f0c61b3ca29d`: shader and area/search lookup tables, MIT. Original copyright notices are retained in the headers and [SMAA-MIT.txt](third-party-licenses/SMAA-MIT.txt). The shader is adapted to three compute passes with explicit mip sampling, zero edge outputs in place of discard, and linear-light neighborhood blending. The original shader and LUTs are otherwise the algorithm reference.
+- [ReXGlue SDK](https://github.com/rexglue/rexglue-sdk), pinned to `c94f5ebdcb3c9d1a460ca48e04f9758448f8d518` with Saints Reborn's patches: native D3D12 renderer integration, BSD 3-Clause. The renderer integration changes are supplied under that license. See [ReXGlue-LICENSE.txt](third-party-licenses/ReXGlue-LICENSE.txt). No SDK binary is bundled; the installer builds the user's existing SDK.
+- [Saints Reborn](https://github.com/whompay/SaintsReborn), pinned to `b81a18ac40d7bf8fc711555f5a958e3a94a97c88`: Display-menu integration, Apache 2.0. See [SaintsReborn-Apache-2.0.txt](third-party-licenses/SaintsReborn-Apache-2.0.txt). WML's API headers are marked MIT. The menu patch adds optional Classic AA controls and is supplied under Apache 2.0.
+
+No Saints Row game files, rebuilt game executable, save data, WML headers or SDK binary are included. The controller and test harnesses are original mod source under the repository's MIT license. Dependencies remain under their respective licenses.

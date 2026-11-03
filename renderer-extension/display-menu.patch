@@ -1,0 +1,55 @@
+--- a/project/src/options_menu.cpp
++++ b/project/src/options_menu.cpp
+@@ -35,6 +35,11 @@
+ #include <string>
+ #include <vector>
+ 
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++
+ #include <rex/cvar.h>
+ #include <rex/hook.h>
+ #include <rex/logging.h>
+@@ -180,6 +185,26 @@
+   std::vector<uint32_t> choice_text;
+   int applied = -1;       // last applied / shown choice
+ };
++
++// The optional Classic AA mod owns its preference and menu-bypass logic.
++// Resolve its small API after mods are loaded, when Display is first opened.
++bool ClassicAaAvailable() {
++  const HMODULE mod = GetModuleHandleW(L"ClassicAA.dll");
++  return mod && GetProcAddress(mod, "ClassicAAGetEnabled") &&
++         GetProcAddress(mod, "ClassicAASetEnabled");
++}
++int ClassicAaChoice() {
++  using Get = int (*)();
++  const HMODULE mod = GetModuleHandleW(L"ClassicAA.dll");
++  const auto get = mod ? reinterpret_cast<Get>(GetProcAddress(mod, "ClassicAAGetEnabled")) : nullptr;
++  return get && get() ? 1 : 0;
++}
++void ApplyClassicAaChoice(int choice) {
++  using Set = void (*)(int);
++  const HMODULE mod = GetModuleHandleW(L"ClassicAA.dll");
++  const auto set = mod ? reinterpret_cast<Set>(GetProcAddress(mod, "ClassicAASetEnabled")) : nullptr;
++  if (set) set(choice == 1 ? 1 : 0);
++}
+ 
+ std::vector<Row>& Rows() {
+   static std::vector<Row> rows = {
+@@ -305,6 +330,13 @@
+        },
+        false},
+   };
++  static std::once_flag classic_aa_row;
++  std::call_once(classic_aa_row, [] {
++    if (ClassicAaAvailable()) {
++      rows.insert(rows.begin() + 1,
++                  {"Anti-aliasing", {"Off", "SMAA High"}, ClassicAaChoice, ApplyClassicAaChoice, false});
++    }
++  });
+   return rows;
+ }
+ 

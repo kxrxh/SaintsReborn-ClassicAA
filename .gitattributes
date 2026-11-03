@@ -1,0 +1,6 @@
+* text=auto
+*.patch text eol=lf -whitespace
+*.ps1 text eol=crlf
+# Keep upstream shader/LUT bytes and notices intact.
+renderer-extension/*.h -text -whitespace
+renderer-extension/backend.inc -text
