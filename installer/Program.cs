@@ -132,11 +132,10 @@ internal sealed class InstallerWindow {
         uninstall.Click += async (s, e) => await Operate(true);
         updates.Click += async (s, e) => await UpdateInstaller();
         Find<Button>("OpenLog").Click += (s, e) => {
-            try { if (logPath != null) Process.Start(new ProcessStartInfo(logPath) { UseShellExecute = true }); else message.Text = "A full log is saved when an operation starts."; }
-            catch (Exception error) { message.Text = error.Message; }
+            if (logPath != null) Open(logPath); else message.Text = "A full log is saved when an operation starts.";
         };
-        Find<Button>("Releases").Click += (s, e) => Process.Start(new ProcessStartInfo(ReleaseInfo.ReleasesUrl) { UseShellExecute = true });
-        Find<Button>("GetPowerShell").Click += (s, e) => Process.Start(new ProcessStartInfo("https://github.com/PowerShell/PowerShell/releases/latest") { UseShellExecute = true });
+        Find<Button>("Releases").Click += (s, e) => Open(ReleaseInfo.ReleasesUrl);
+        Find<Button>("GetPowerShell").Click += (s, e) => Open("https://github.com/PowerShell/PowerShell/releases/latest");
         Window.SourceInitialized += (s, e) => {
             IntPtr handle = new WindowInteropHelper(Window).Handle;
             int dark = 1, caption = 0x221C19, text = 0xF4F2F1;
@@ -158,6 +157,12 @@ internal sealed class InstallerWindow {
     static bool IsGameFolder(string path) {
         try { return !String.IsNullOrWhiteSpace(path) && File.Exists(Path.Combine(path, "dist", "saintsrow.exe")); }
         catch (ArgumentException) { return false; }
+        catch (IOException) { return false; }
+        catch (NotSupportedException) { return false; }
+    }
+    void Open(string target) {
+        try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); }
+        catch (Exception error) { message.Text = error.Message; }
     }
     string DetectFolder() {
         if (File.Exists(settingsPath)) { string saved = File.ReadAllText(settingsPath).Trim(); if (IsGameFolder(saved)) return saved; }

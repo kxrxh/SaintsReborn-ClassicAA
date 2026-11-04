@@ -64,6 +64,8 @@ internal static class InstallerTests {
             Check(window.Window.FindName("Install") is Button && window.Window.FindName("Uninstall") is Button, "The real UI did not load.");
             ((TextBox)window.Window.FindName("GameFolder")).Text = "invalid\"folder";
             Check(!((Button)window.Window.FindName("Install")).IsEnabled, "An invalid folder enabled installation.");
+            ((TextBox)window.Window.FindName("GameFolder")).Text = "C:\\" + new string('x', 40000);
+            Check(!((Button)window.Window.FindName("Install")).IsEnabled, "An overlong folder enabled installation.");
             window.Window.Close();
             Console.WriteLine("PASS: embedded payload, ZIP path validation, release URLs, SHA256 verification, script invocation, Unicode paths, exit codes and real WPF controls.");
             return 0;
