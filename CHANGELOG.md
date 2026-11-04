@@ -4,8 +4,6 @@
 
 - Use the public latest-release link for update checks, avoiding GitHub API rate limits.
 
-## 0.2.0
-
 - Add a native Windows app for installation, updates, removal and recovery.
 - Check downloaded installer updates against the published SHA256 checksum.
 - Allow retrying interrupted removal and recovering incomplete installations.
