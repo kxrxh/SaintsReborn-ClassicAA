@@ -1,3 +1,4 @@
+#requires -Version 7.0
 param([Parameter(Mandatory=$true)][string]$GameRoot)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot
@@ -49,9 +50,26 @@ try {
     if (!$blocked -or [IO.File]::ReadAllText("$root\project\test.cpp") -ne 'later edit') { throw 'Removal did not protect later edits.' }
     [IO.File]::WriteAllText("$root\project\test.cpp", 'after')
     [IO.File]::WriteAllText("$root\dist\mods\ClassicAA\mod.ini", 'enabled=0')
+    $lock = [IO.File]::Open("$root\dist\mods\ClassicAA\mod.ini", [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    $blocked = $false
+    try {
+        try { & "$repo\Uninstall.ps1" -GameRoot $root } catch { $blocked=$true }
+    } finally { $lock.Dispose() }
+    if (!$blocked -or [IO.File]::ReadAllText("$root\project\test.cpp") -ne 'before') { throw 'The locked-file fixture did not interrupt restoration after the first file.' }
     & "$repo\Uninstall.ps1" -GameRoot $root
     if ([IO.File]::ReadAllText("$root\project\test.cpp") -ne 'before' -or [IO.File]::ReadAllText("$root\unrelated.txt") -ne 'keep' -or (Test-Path "$root\dist\mods\ClassicAA\mod.ini")) { throw 'Removal restoration failed.' }
-    Write-Output 'PASS: renderer/menu patches apply and detect existing changes; removal protects later edits, permits preference changes, and restores only affected files.'
+    # Incomplete backups lack final hashes; preserve unknown contents before recovery.
+    [IO.File]::WriteAllText("$root\project\test.cpp", 'unrecorded edit')
+    [IO.File]::WriteAllText("$root\dist\mods\ClassicAA\mod.ini", 'enabled=0')
+    foreach ($entry in $entries) { $entry.after=$null }
+    @{gameRoot=$root;backup=$backup;complete=$false;files=$entries} | ConvertTo-Json -Depth 6 | Set-Content "$root\classic-aa-backups\active.json"
+    Remove-Item -LiteralPath "$backup\restored.json"
+    & "$repo\Uninstall.ps1" -GameRoot $root
+    $recovery = @(Get-ChildItem -LiteralPath $backup -Directory -Filter 'recovery-*')
+    if ($recovery.Count -ne 1) { throw 'Expected one preserved recovery folder.' }
+    $recovery = $recovery[0]
+    if ([IO.File]::ReadAllText("$root\project\test.cpp") -ne 'before' -or [IO.File]::ReadAllText("$($recovery.FullName)\project\test.cpp") -ne 'unrecorded edit' -or [IO.File]::ReadAllText("$($recovery.FullName)\dist\mods\ClassicAA\mod.ini") -ne 'enabled=0') { throw 'Incomplete-install recovery lost original or unrecognized contents.' }
+    Write-Output 'PASS: patches, later-edit protection, locked-file retry, and incomplete-install recovery with preserved unknown contents.'
 } finally {
     $resolved = [IO.Path]::GetFullPath($temporary)
     $allowed = [IO.Path]::GetFullPath((Join-Path $repo 'build')) + '\'

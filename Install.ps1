@@ -1,3 +1,4 @@
+#requires -Version 7.0
 param([Parameter(Mandatory=$true)][string]$GameRoot, [switch]$CheckOnly, [ValidateRange(1,64)][int]$Jobs=8)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\scripts\Tools.ps1"
@@ -40,8 +41,9 @@ foreach ($relative in $paths) {
     $entries += [pscustomobject]@{path=$relative;existed=$existed;before=if($existed){(Get-FileHash $source).Hash}else{$null};after=$null}
 }
 # Write recovery information before any game/source changes.
-$state = [pscustomobject]@{version='0.1.0';gameRoot=$GameRoot;backup=$backup;complete=$false;files=$entries}
-$state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $active -Encoding UTF8
+$state = [pscustomobject]@{version='0.2.0';gameRoot=$GameRoot;backup=$backup;complete=$false;files=$entries}
+$state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath "$active.new" -Encoding UTF8
+[IO.File]::Move("$active.new", $active, $true)
 try {
     if ($menuState -eq 'Ready') { & git -C $GameRoot apply --ignore-space-change $menuPatch; if ($LASTEXITCODE) { throw 'Display patch failed.' } }
     if ($gpuState -eq 'Ready') { & git -C $sdk apply --ignore-space-change $gpuPatch; if ($LASTEXITCODE) { throw 'Renderer patch failed.' } }
@@ -59,21 +61,23 @@ try {
     New-Item -ItemType Directory -Path $mod -Force | Out-Null
     Copy-Item -LiteralPath "$PSScriptRoot\build\ClassicAA.dll" -Destination $mod -Force
     foreach ($name in @('README.md','LICENSE')) { Copy-Item -LiteralPath "$PSScriptRoot\$name" -Destination $mod -Force }
-    if (!(Test-Path -LiteralPath "$mod\mod.ini")) { Copy-Item -LiteralPath "$PSScriptRoot\mod.ini" -Destination $mod }
+    $previous = if (Test-Path -LiteralPath "$mod\mod.ini") { [IO.File]::ReadAllText("$mod\mod.ini") } else { '' }
+    $metadata = [IO.File]::ReadAllText("$PSScriptRoot\mod.ini")
+    foreach ($key in @('enabled','bypass_menus')) {
+        $saved = [regex]::Match($previous, "(?m)^$key\s*=\s*([01])\s*$")
+        if ($saved.Success) { $metadata = [regex]::Replace($metadata, "(?m)^$key\s*=\s*[01]\s*$", "$key = $($saved.Groups[1].Value)") }
+    }
+    [IO.File]::WriteAllText("$mod\mod.ini", $metadata)
     foreach ($entry in $entries) { $entry.after = (Get-FileHash (Join-Path $GameRoot $entry.path)).Hash }
     $state.complete = $true
-    $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $active -Encoding UTF8
+    $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath "$active.new" -Encoding UTF8
+    [IO.File]::Move("$active.new", $active, $true)
     Write-Output 'Installed. Enable Classic AA in Whompay''s Mod Loader, then use Options > Display > Anti-aliasing.'
 } catch {
-    # A failed build must not leave half-applied source or runtime replacements.
-    foreach ($entry in $entries) {
-        $destination = Join-Path $GameRoot $entry.path
-        if ($entry.existed) {
-            Copy-Item -LiteralPath (Join-Path $backup $entry.path) -Destination $destination -Force
-            if ($entry.path -match '\.(cpp|h|inc)$') { (Get-Item -LiteralPath $destination).LastWriteTime = Get-Date }
-        }
-        elseif (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }
+    $failure = $_
+    try { & "$PSScriptRoot\Uninstall.ps1" -GameRoot $GameRoot }
+    catch {
+        Write-Warning "Rollback could not finish: $($_.Exception.Message) Close the game and run Uninstall.ps1 again. Backup: $backup"
     }
-    Remove-Item -LiteralPath $active -Force
-    throw
+    throw $failure
 }

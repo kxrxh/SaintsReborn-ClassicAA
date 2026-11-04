@@ -1,3 +1,4 @@
+#requires -Version 7.0
 param([Parameter(Mandatory=$true)][string]$GameRoot)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\scripts\Tools.ps1"

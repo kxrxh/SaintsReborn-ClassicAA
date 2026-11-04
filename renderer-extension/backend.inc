@@ -13,6 +13,14 @@ bool D3D12CommandProcessor::SmaaEnabled() {
   return g_smaa_enabled.load(std::memory_order_relaxed);
 }
 
+void D3D12CommandProcessor::SmaaResetWorkTextures() {
+  smaa_copy_.Reset();
+  smaa_linear_.Reset();
+  smaa_edges_.Reset();
+  smaa_weights_.Reset();
+  smaa_textures_submission_ = 0;
+}
+
 bool D3D12CommandProcessor::SmaaInitialize() {
   using Compile = HRESULT(WINAPI*)(LPCVOID, SIZE_T, LPCSTR, const D3D_SHADER_MACRO*,
                                    ID3DInclude*, LPCSTR, LPCSTR, UINT, UINT, ID3DBlob**, ID3DBlob**);

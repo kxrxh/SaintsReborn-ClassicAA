@@ -83,6 +83,7 @@ struct D3D12CommandProcessor {
     for(UINT i=0;i<count;++i){handles[i]={cpu,gpu};cpu.ptr+=step;gpu.ptr+=step;}return true;
   }
   bool SmaaInitialize();void SmaaApply(ID3D12Resource*,uint32_t,uint32_t);static bool SmaaEnabled();
+  void SmaaResetWorkTextures();
 };
 #include "../renderer-extension/backend.inc"
 }
@@ -140,6 +141,17 @@ int main(){try{
     std::cout<<"PASS "<<w<<'x'<<h<<" enabled="<<enabled<<" diagonal="<<diagonal<<" changed="<<changed<<" intermediate="<<intermediate<<'\n';
   };
   run(64,64,false,false);run(64,64,true,false);run(257,131,true,true);run(129,67,false,true);run(129,67,true,false);
+  cp.submission_current_=100000;
+  run(257,131,true,true);
+  // ShutdownContext waits for the GPU before resetting its submission numbers.
+  for(auto& r:cp.resources_for_deletion_)r.second->Release();
+  cp.resources_for_deletion_.clear();
+  cp.SmaaResetWorkTextures();
+  assert(!cp.smaa_copy_ && !cp.smaa_linear_ && !cp.smaa_edges_ && !cp.smaa_weights_ && cp.smaa_textures_submission_==0);
+  cp.submission_current_=1;cp.submission_completed_=0;
+  run(129,67,true,false);
+  assert(cp.resources_for_deletion_.empty());
+  std::cout<<"PASS: context reset releases AA work textures without waiting for old submission numbers\n";
   if(debug){ComPtr<ID3D12InfoQueue> info;if(SUCCEEDED(device.As(&info))){for(UINT64 i=0;i<info->GetNumStoredMessages();++i){SIZE_T length=0;info->GetMessage(i,nullptr,&length);std::vector<uint8_t> bytes(length);auto message=reinterpret_cast<D3D12_MESSAGE*>(bytes.data());info->GetMessage(i,message,&length);if(message->Severity<=D3D12_MESSAGE_SEVERITY_ERROR)throw std::runtime_error(message->pDescription);}}}
   CloseHandle(event);std::cout<<"Native SMAA GPU validation passed; debug layer="<<debug<<'\n';return 0;
 }catch(const std::exception& e){std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}}

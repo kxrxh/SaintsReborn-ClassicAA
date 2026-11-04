@@ -1,6 +1,14 @@
 --- a/src/graphics/d3d12/command_processor.cpp
 +++ b/src/graphics/d3d12/command_processor.cpp
-@@ -2816,6 +2816,7 @@
+@@ -2317,6 +2317,7 @@
+ 
+ void D3D12CommandProcessor::ShutdownContext() {
+   AwaitAllQueueOperationsCompletion();
++  SmaaResetWorkTextures();
+   ui::d3d12::util::ReleaseAndNull(native_root_signature_);
+   StopReplayThread();
+   InvalidateAllVertexBufferResidency();
+@@ -2816,6 +2817,7 @@
          if (swap_post_effect == SwapPostEffect::kNone && LookWantsFxaa()) {
            swap_post_effect = SwapPostEffect::kFxaa;  // Modern Look asks for FXAA
          }
@@ -8,7 +16,7 @@
          bool use_fxaa = swap_post_effect == SwapPostEffect::kFxaa ||
                          swap_post_effect == SwapPostEffect::kFxaaExtreme;
          if (use_fxaa) {
-@@ -3066,6 +3067,8 @@
+@@ -3066,6 +3068,8 @@
                                  apply_gamma_dest_initial_state);
          }
  
@@ -17,7 +25,7 @@
          // Modern Look (mods), on the finished frame.
          LookApply(guest_output_resource, guest_output_width, guest_output_height);
  
-@@ -7203,6 +7206,12 @@
+@@ -7203,6 +7207,12 @@
  
  
  // ---------------------------------------------------------------------------
@@ -30,7 +38,7 @@
  // Modern Look (see command_processor.h)
  // ---------------------------------------------------------------------------
  
-@@ -7981,3 +7990,15 @@
+@@ -7981,3 +7991,15 @@
      g_look.clear();
    }
  }
@@ -48,11 +56,12 @@
 +}
 --- a/include/rex/graphics/d3d12/command_processor.h
 +++ b/include/rex/graphics/d3d12/command_processor.h
-@@ -216,6 +216,17 @@
+@@ -216,6 +216,18 @@
        look_final_pipeline_;
    Microsoft::WRL::ComPtr<ID3D12Resource> look_copy_, look_bloom_a_, look_bloom_b_;
    uint64_t look_textures_submission_ = 0;
 +  // Native SMAA 1x High. Independent of Modern Look/color grading.
++  void SmaaResetWorkTextures();
 +  bool SmaaInitialize();
 +  void SmaaApply(ID3D12Resource* guest_output, uint32_t width, uint32_t height);
 +  static bool SmaaEnabled();
