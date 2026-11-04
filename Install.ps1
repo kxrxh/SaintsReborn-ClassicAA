@@ -41,7 +41,7 @@ foreach ($relative in $paths) {
     $entries += [pscustomobject]@{path=$relative;existed=$existed;before=if($existed){(Get-FileHash $source).Hash}else{$null};after=$null}
 }
 # Write recovery information before any game/source changes.
-$state = [pscustomobject]@{version='0.2.0';gameRoot=$GameRoot;backup=$backup;complete=$false;files=$entries}
+$state = [pscustomobject]@{version='0.2.1';gameRoot=$GameRoot;backup=$backup;complete=$false;files=$entries}
 $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath "$active.new" -Encoding UTF8
 [IO.File]::Move("$active.new", $active, $true)
 try {

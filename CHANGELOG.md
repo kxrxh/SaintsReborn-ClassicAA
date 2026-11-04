@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Use the public latest-release link for update checks, avoiding GitHub API rate limits.
+
 ## 0.2.0
 
 - Add a native Windows app for installation, updates, removal and recovery.

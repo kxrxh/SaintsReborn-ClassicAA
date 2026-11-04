@@ -45,22 +45,16 @@ internal sealed class ReleaseInfo {
     internal Version Version;
     internal string Name, InstallerUrl, ChecksumUrl;
     internal const string ReleasesUrl = "https://github.com/kxrxh/SaintsReborn-ClassicAA/releases";
-    internal static ReleaseInfo Parse(string json) {
-        var data = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(json);
-        string tag = data["tag_name"] as string;
-        if (tag == null || !Regex.IsMatch(tag, @"^v\d+\.\d+\.\d+$")) throw new InvalidDataException("Unsupported release version.");
+    internal static ReleaseInfo FromLatestUri(Uri uri) {
+        string tagPrefix = ReleasesUrl + "/tag/";
+        if (uri == null || !uri.AbsoluteUri.StartsWith(tagPrefix, StringComparison.Ordinal)) throw new InvalidDataException("The release link points outside the project.");
+        string tag = uri.AbsoluteUri.Substring(tagPrefix.Length);
+        if (!Regex.IsMatch(tag, @"^v\d+\.\d+\.\d+$")) throw new InvalidDataException("Unsupported release version.");
         var info = new ReleaseInfo { Version = new Version(tag.Substring(1)), Name = "SaintsReborn-ClassicAA-Setup-" + tag + ".exe" };
         string checksumName = "SaintsReborn-ClassicAA-" + tag + ".sha256";
         string prefix = ReleasesUrl + "/download/" + tag + "/";
-        foreach (var value in (System.Collections.IEnumerable)data["assets"]) {
-            var asset = (Dictionary<string, object>)value;
-            string name = asset["name"] as string, url = asset["browser_download_url"] as string;
-            if (name != info.Name && name != checksumName) continue;
-            if (url != prefix + name) throw new InvalidDataException("The release download points outside the project.");
-            if (name == info.Name) { if (info.InstallerUrl != null) throw new InvalidDataException("Duplicate installer."); info.InstallerUrl = url; }
-            else { if (info.ChecksumUrl != null) throw new InvalidDataException("Duplicate checksum."); info.ChecksumUrl = url; }
-        }
-        if (info.InstallerUrl == null || info.ChecksumUrl == null) throw new InvalidDataException("This release has no Windows installer. Use the project Releases page.");
+        info.InstallerUrl = prefix + info.Name;
+        info.ChecksumUrl = prefix + checksumName;
         return info;
     }
     internal static void Verify(byte[] bytes, string name, string checksums) {
@@ -262,7 +256,11 @@ internal sealed class InstallerWindow {
         SetBusy(true, latest == null ? "Checking GitHub Releases…" : "Downloading and verifying the new installer…");
         try {
             if (latest == null) {
-                latest = ReleaseInfo.Parse(await http.GetStringAsync("https://api.github.com/repos/kxrxh/SaintsReborn-ClassicAA/releases/latest"));
+                using (var request = new HttpRequestMessage(HttpMethod.Head, ReleaseInfo.ReleasesUrl + "/latest"))
+                using (var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead)) {
+                    response.EnsureSuccessStatusCode();
+                    latest = ReleaseInfo.FromLatestUri(response.RequestMessage.RequestUri);
+                }
                 if (latest.Version <= Program.Version) { latest = null; SetBusy(false, "You have the latest installer."); return; }
                 updates.Content = "Get v" + latest.Version;
                 SetBusy(false, "A newer installer is available. Download it to update Classic AA."); return;

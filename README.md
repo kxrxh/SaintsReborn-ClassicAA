@@ -16,7 +16,7 @@ Native SMAA 1x High anti-aliasing for [Saints Reborn](https://github.com/whompay
 
 Requirements: Windows 10/11 x64 with .NET Framework 4.8, [PowerShell 7](https://github.com/PowerShell/PowerShell/releases/latest), Direct3D 12, Saints Reborn V1.2.2 / source `b81a18a`, its patched ReXGlue SDK `c94f5eb`, Git, Visual Studio 2022 C++ Build Tools with CMake/Ninja, and the LLVM 19.1.5 installation used by Saints Reborn. Build and run Saints Reborn normally first.
 
-1. Download `SaintsReborn-ClassicAA-Setup-v0.2.0.exe` from [Releases](https://github.com/kxrxh/SaintsReborn-ClassicAA/releases/latest).
+1. Download `SaintsReborn-ClassicAA-Setup-v0.2.1.exe` from [Releases](https://github.com/kxrxh/SaintsReborn-ClassicAA/releases/latest).
 2. Save and close the game.
 3. Open the app, choose the Saints Reborn folder and click **Install Classic AA**.
 4. Enable **Classic AA** in Whompay's Mod Loader and launch the game.

@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using System.Web.Script.Serialization;
 using System.Windows.Controls;
 using ClassicAA.Setup;
 
@@ -32,12 +31,10 @@ internal static class InstallerTests {
             }
             string tag = "v9.8.7", name = "SaintsReborn-ClassicAA-Setup-" + tag + ".exe", sum = "SaintsReborn-ClassicAA-" + tag + ".sha256";
             string prefix = ReleaseInfo.ReleasesUrl + "/download/" + tag + "/";
-            var assets = new[] { new Dictionary<string, object> { { "name", name }, { "browser_download_url", prefix + name } }, new Dictionary<string, object> { { "name", sum }, { "browser_download_url", prefix + sum } } };
-            var data = new Dictionary<string, object> { { "tag_name", tag }, { "assets", assets } };
-            var json = new JavaScriptSerializer(); var release = ReleaseInfo.Parse(json.Serialize(data));
-            Check(release.Version == new Version(9, 8, 7) && release.Name == name, "Release parsing failed.");
-            assets[0]["browser_download_url"] = "https://example.com/untrusted.exe";
-            Reject(() => ReleaseInfo.Parse(json.Serialize(data)), "An external update URL was accepted.");
+            var release = ReleaseInfo.FromLatestUri(new Uri(ReleaseInfo.ReleasesUrl + "/tag/" + tag));
+            Check(release.Version == new Version(9, 8, 7) && release.Name == name && release.InstallerUrl == prefix + name && release.ChecksumUrl == prefix + sum, "Release link parsing failed.");
+            Reject(() => ReleaseInfo.FromLatestUri(new Uri("https://example.com/releases/tag/" + tag)), "An external update URL was accepted.");
+            Reject(() => ReleaseInfo.FromLatestUri(new Uri(ReleaseInfo.ReleasesUrl + "/tag/main")), "An unsupported release tag was accepted.");
             string download = Path.Combine(root, name); File.WriteAllText(download, "test download");
             string hash; using (var sha = SHA256.Create()) hash = BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(download))).Replace("-", "").ToLowerInvariant();
             ReleaseInfo.Verify(File.ReadAllBytes(download), name, hash + "  " + name + "\n");
